@@ -34,11 +34,6 @@ public class TestData {
             System.out.println("----------end of show channel map---------");
 
 
-            JavaPairRDD<String, Integer> showAmountMap = showAmountRDD
-                    .mapToPair(splitStringInMapStringInteger());
-            showAmountMap.collect().forEach(System.out::println);
-            System.out.println("----------end of show amount map-----_----");
-
         }
 
 
@@ -54,16 +49,6 @@ public class TestData {
             };
         }
 
-        private static PairFunction<String, String, Integer> splitStringInMapStringInteger() {
-            return new PairFunction<String, String, Integer>() {
-                public Tuple2<String, Integer> call(String s) {
-                    int show = 0;
-                    int amount = 1;
-                    String[] mas = s.split(",");
-                    return new Tuple2<String, Integer>(mas[show], new Integer(mas[amount]));
-                }
-            };
-        }
 }
 
 
