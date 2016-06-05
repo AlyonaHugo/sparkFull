@@ -39,6 +39,11 @@ public class TestData {
             showAmountMap.collect().forEach(System.out::println);
             System.out.println("----------end of show amount map-----_----");
 
+            JavaPairRDD<String, Integer> combined = findTotalAmountPerChannel(channelShowMap, showAmountMap);
+
+            combined.collect().forEach(System.out::println);
+            System.out.println("*******************end********************");
+            combined.saveAsTextFile(RESULT_FILE);
         }
 
 
@@ -61,6 +66,23 @@ public class TestData {
                 int amount = 1;
                 String[] mas = s.split(",");
                 return new Tuple2<String, Integer>(mas[show], new Integer(mas[amount]));
+            }
+        };
+    }
+
+    private static JavaPairRDD<String, Integer> findTotalAmountPerChannel(JavaPairRDD<String, String> channelShowMap,
+                                                                          +JavaPairRDD<String, Integer> collectionTypeWithSize) {
+        return channelShowMap
+                .mapToPair(Tuple2::swap)
+                .join(collectionTypeWithSize)
+                .mapToPair(createChannelAmountMap())
+                .reduceByKey((a, b) -> a + b);
+    }
+
+    private static PairFunction<Tuple2<String, Tuple2<String, Integer>>, String, Integer> createChannelAmountMap() {
+        return new PairFunction<Tuple2<String, Tuple2<String, Integer>>, String, Integer>() {
+            public Tuple2<String, Integer> call(Tuple2<String, Tuple2<String, Integer>> s) {
+                return new Tuple2<String, Integer>(s._2._1.toString(), new Integer(s._2._2));
             }
         };
     }
