@@ -28,9 +28,26 @@ public class TestData {
             JavaRDD<String> channelShowRDD = sc.textFile(CHANNEL_SHOW_FILE);
             JavaRDD<String> showAmountRDD = sc.textFile(SHOW_AMOUNT_FILE);
 
+            JavaPairRDD<String, String> showChannelMap = channelShowRDD
+                    .mapToPair(splitStringInMap());
+            showChannelMap.collect().forEach(System.out::println);
+            System.out.println("----------end of show channel map---------");
+
 
         }
 
+
+
+    private static PairFunction<String, String, String> splitStringInMap() {
+        return new PairFunction<String, String, String>() {
+            public Tuple2<String, String> call(String s) {
+                int channel = 0;
+                int show = 1;
+                String[] mas = s.split(",");
+                return new Tuple2<String, String>(mas[show], mas[channel]);
+            }
+        };
+    }
 }
 
 
