@@ -37,6 +37,19 @@ public class TestData {
                 .mapToPair(splitStringInMapStringInteger());
         showAmountMap.collect().forEach(System.out::println);
         System.out.println("----------end of show amount map-----_----");
+        
+        JavaPairRDD<String, Integer> combined = findTotalAmountPerChannel(showChannelMap, showAmountMap);
+
+        combined.collect()
+                .forEach(System.out::println);
+        System.out.println("*******************end********************");
+
+
+        // Delete old file here
+        deleteOldFile();
+
+        combined.saveAsTextFile(RESULT_FILE);
+        
     }
     private static PairFunction<String, String, String> splitStringInMap() {
         return new PairFunction<String, String, String>() {
@@ -60,6 +73,38 @@ public class TestData {
             }
         };
     }
+    
+    
+    private static JavaPairRDD<String, Integer> findTotalAmountPerChannel(JavaPairRDD<String, String> showChannelMap,
+                                                                          JavaPairRDD<String, Integer> collectionTypeWithSize) {
+        return showChannelMap
+                .join(collectionTypeWithSize)
+                .mapToPair(createChannelAmountMap())
+                .reduceByKey((a, b) -> a + b);
+    }
+
+    private static PairFunction<Tuple2<String, Tuple2<String, Integer>>, String, Integer> createChannelAmountMap() {
+        return new PairFunction<Tuple2<String, Tuple2<String, Integer>>, String, Integer>() {
+            public Tuple2<String, Integer> call(Tuple2<String, Tuple2<String, Integer>> s) {
+                return new Tuple2<String, Integer>(s._2._1.toString(), new Integer( s._2._2));
+            }
+        };
+    }
+
+    private static void deleteOldFile() {
+        FileSystem hdfs = null;
+        Path newFolderPath = null;
+        try {
+            hdfs = FileSystem.get(new Configuration());
+            newFolderPath = new Path(RESULT_FILE);
+            if(hdfs.exists(newFolderPath)){
+                hdfs.delete(newFolderPath, true);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
 
 
