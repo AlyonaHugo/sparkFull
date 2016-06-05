@@ -16,35 +16,41 @@ import java.io.IOException;
 public class TestData {
 
 
-        private static final String TASK_NAME = "Aggregation task";
-        private static final String CHANNEL_SHOW_FILE = "file1.txt";
-        private static final String SHOW_AMOUNT_FILE = "file2.txt";
-        private static final String RESULT_FILE = "result";
+    private static final String TASK_NAME = "Aggrigation task";
+    private static final String CHANNEL_SHOW_FILE = "file1.txt";
+    private static final String SHOW_AMOUNT_FILE = "file2.txt";
+    private static final String RESULT_FILE = "result";
 
-        public static void main(String[] args) {
-            SparkConf conf = new SparkConf().setAppName(TASK_NAME);
-            JavaSparkContext sc = new JavaSparkContext(conf);
+    public static void main(String[] args) {
+        SparkConf conf = new SparkConf().setAppName(TASK_NAME);
+        JavaSparkContext sc = new JavaSparkContext(conf);
 
-            JavaRDD<String> channelShowRDD = sc.textFile(CHANNEL_SHOW_FILE);
-            JavaRDD<String> showAmountRDD = sc.textFile(SHOW_AMOUNT_FILE);
+        JavaRDD<String> channelShowRDD = sc.textFile(CHANNEL_SHOW_FILE);
+        JavaRDD<String> showAmountRDD = sc.textFile(SHOW_AMOUNT_FILE);
 
-            JavaPairRDD<String, String> showChannelMap = channelShowRDD
-                    .mapToPair(splitStringInMap());
-            showChannelMap.collect().forEach(System.out::println);
-            System.out.println("----------end of show channel map---------");
+        JavaPairRDD<String, String> showChannelMap = channelShowRDD
+                .mapToPair(splitStringInMap());
+        showChannelMap.collect().forEach(System.out::println);
+        System.out.println("----------end of show channel map---------");
 
 
-            JavaPairRDD<String, Integer> showAmountMap = showAmountRDD
-                    .mapToPair(splitStringInMapStringInteger());
-            showAmountMap.collect().forEach(System.out::println);
-            System.out.println("----------end of show amount map-----_----");
+        JavaPairRDD<String, Integer> showAmountMap = showAmountRDD
+                .mapToPair(splitStringInMapStringInteger());
+        showAmountMap.collect().forEach(System.out::println);
+        System.out.println("----------end of show amount map-----_----");
 
-            JavaPairRDD<String, Integer> combined = findTotalAmountPerChannel(channelShowMap, showAmountMap);
+        JavaPairRDD<String, Integer> combined = findTotalAmountPerChannel(showChannelMap, showAmountMap);
 
-            combined.collect().forEach(System.out::println);
-            System.out.println("*******************end********************");
-            combined.saveAsTextFile(RESULT_FILE);
-        }
+        combined.collect()
+                .forEach(System.out::println);
+        System.out.println("*******************end********************");
+
+
+        // Delete old file here
+        deleteOldFile();
+
+        combined.saveAsTextFile(RESULT_FILE);
+    }
 
 
 
@@ -70,10 +76,9 @@ public class TestData {
         };
     }
 
-    private static JavaPairRDD<String, Integer> findTotalAmountPerChannel(JavaPairRDD<String, String> channelShowMap,
-                                                                          +JavaPairRDD<String, Integer> collectionTypeWithSize) {
-        return channelShowMap
-                .mapToPair(Tuple2::swap)
+    private static JavaPairRDD<String, Integer> findTotalAmountPerChannel(JavaPairRDD<String, String> showChannelMap,
+                                                                          JavaPairRDD<String, Integer> collectionTypeWithSize) {
+        return showChannelMap
                 .join(collectionTypeWithSize)
                 .mapToPair(createChannelAmountMap())
                 .reduceByKey((a, b) -> a + b);
@@ -82,9 +87,25 @@ public class TestData {
     private static PairFunction<Tuple2<String, Tuple2<String, Integer>>, String, Integer> createChannelAmountMap() {
         return new PairFunction<Tuple2<String, Tuple2<String, Integer>>, String, Integer>() {
             public Tuple2<String, Integer> call(Tuple2<String, Tuple2<String, Integer>> s) {
-                return new Tuple2<String, Integer>(s._2._1.toString(), new Integer(s._2._2));
+                return new Tuple2<String, Integer>(s._2._1.toString(), new Integer( s._2._2));
             }
         };
     }
+
+    private static void deleteOldFile() {
+        FileSystem hdfs = null;
+        Path newFolderPath = null;
+        try {
+            hdfs = FileSystem.get(new Configuration());
+            newFolderPath = new Path(RESULT_FILE);
+            if(hdfs.exists(newFolderPath)){
+                hdfs.delete(newFolderPath, true);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
+
 
